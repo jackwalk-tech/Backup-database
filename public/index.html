@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB Backup & Import Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .tab-navigation {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .step {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .step:last-child {
+            border-bottom: none;
+        }
+
+        .step-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e0e0e0;
+        }
+
+        .btn-success {
+            background: #4caf50;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.loading {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(25, 118, 210, 0.3);
+            border-top-color: #1976d2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .collections-section {
+            display: none;
+        }
+
+        .collections-section.show {
+            display: block;
+        }
+
+        .collection-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .collection-stats {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .collection-stats strong {
+            color: #333;
+        }
+
+        .select-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .select-controls button {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .collections-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .collections-table thead {
+            background: #f8f9fa;
+        }
+
+        .collections-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .collections-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .collections-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .collections-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .checkbox-cell {
+            width: 50px;
+            text-align: center;
+        }
+
+        input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .count-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .file-upload-area:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .file-upload-area.dragover {
+            border-color: #667eea;
+            background: #e3f2fd;
+        }
+
+        .file-upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .file-upload-text {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .file-upload-subtext {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .selected-file {
+            display: none;
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .selected-file.show {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-icon {
+            font-size: 32px;
+        }
+
+        .file-details {
+            text-align: left;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #2e7d32;
+            margin-bottom: 4px;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .remove-file {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .remove-file:hover {
+            background: #d32f2f;
+        }
+
+        .import-results {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .import-results.show {
+            display: block;
+        }
+
+        .result-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .result-summary {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .result-summary strong {
+            color: #333;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 13px;
+        }
+
+        .result-table th {
+            text-align: left;
+            padding: 8px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            font-weight: 600;
+        }
+
+        .result-table td {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .status-success {
+            color: #4caf50;
+            font-weight: 600;
+        }
+
+        .status-error {
+            color: #f44336;
+            font-weight: 600;
+        }
+
+        .status-skipped {
+            color: #ff9800;
+            font-weight: 600;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            color: #333;
+        }
+
+        .example {
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗄️ MongoDB Backup & Import Tool</h1>
+        <p class="subtitle">Export and Import MongoDB databases with ease</p>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="backup">📦 Backup Database</button>
+            <button class="tab-btn" data-tab="import">📥 Import Database</button>
+        </div>
+
+        <!-- Backup Tab Content -->
+        <div class="tab-content active" id="backupTab">
+            <!-- Step 1: Connection -->
+            <div class="step" id="step1">
+                <div class="step-title">Step 1: Database Connection</div>
+                
+                <div class="input-group">
+                    <label for="mongoUrl">MongoDB Connection URL</label>
+                    <input 
+                        type="text" 
+                        id="mongoUrl" 
+                        placeholder="mongodb://localhost:27017 or mongodb+srv://..."
+                        value="mongodb://localhost:27017"
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label for="dbName">Database Name</label>
+                    <input 
+                        type="text" 
+                        id="dbName" 
+                        placeholder="myDatabase"
+                    >
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" id="connectBtn">Connect & Load Collections</button>
+                </div>
+
+                <div class="status" id="connectStatus"></div>
+            </div>
+
+            <!-- Step 2: Select Collections -->
+            <div class="step collections-section" id="step2">
+                <div class="step-title">Step 2: Select Collections to Backup</div>
+                
+                <div class="collection-controls">
+                    <div class="collection-stats">
+                        <strong id="selectedCount">0</strong> of <strong id="totalCount">0</strong> collections selected
+                        (<strong id="totalDocs">0</strong> total documents)
+                    </div>
+                    <div class="select-controls">
+                        <button class="btn-secondary" id="selectAllBtn">Select All</button>
+                        <button class="btn-secondary" id="deselectAllBtn">Deselect All</button>
+                    </div>
+                </div>
+
+                <table class="collections-table" id="collectionsTable">
+                    <thead>
+                        <tr>
+                            <th class="checkbox-cell">
+                                <input type="checkbox" id="masterCheckbox" checked>
+                            </th>
+                            <th>Collection Name</th>
+                            <th style="text-align: right;">Document Count</th>
+                        </tr>
+                    </thead>
+                    <tbody id="collectionsBody">
+                        <!-- Collections will be loaded here -->
+                    </tbody>
+                </table>
+
+                <div class="button-group" style="margin-top: 20px;">
+                    <button class="btn-success" id="backupBtn">
+                        📦 Create Backup ZIP
+                    </button>
+                </div>
+
+                <div class="status" id="backupStatus"></div>
+            </div>
+
+            <div class="info-box">
+                <strong>📝 How it works:</strong><br>
+                1. Enter your MongoDB URL and database name<br>
+                2. Click "Connect" to load all collections with document counts<br>
+                3. Select which collections you want to backup (all selected by default)<br>
+                4. Click "Create Backup ZIP" to download selected collections as JSON files<br><br>
+                <strong>Example URL:</strong>
+                <div class="example">mongodb://localhost:27017</div>
+            </div>
+        </div>
+
+        <!-- Import Tab Content -->
+        <div class="tab-content" id="importTab">
+            <div class="step">
+                <div class="step-title">Step 1: Upload Backup ZIP File</div>
+                
+                <div class="file-upload-area" id="fileUploadArea">
+                    <div class="file-upload-icon">📦</div>
+                    <div class="file-upload-text">
+                        <strong>Click to select</strong> or drag and drop your backup ZIP file
+                    </div>
+                    <div class="file-upload-subtext">
+                        Supports ZIP files containing JSON collection data
+                    </div>
+                </div>
+
+                <input type="file" id="fileInput" class="file-input" accept=".zip">
+
+                <div class="selected-file" id="selectedFile">
+                    <div class="file-info">
+                        <div class="file-icon">📁</div>
+                        <div class="file-details">
+                            <div class="file-name" id="fileName">backup.zip</div>
+                            <div class="file-size" id="fileSize">0 MB</div>
+                        </div>
+                    </div>
+                    <button class="remove-file" id="removeFileBtn">Remove</button>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 2: Target Database Configuration</div>
+                
+                <div class="input-group">
+                    <label for="importMongoUrl">MongoDB Connection URL</label>
+                    <input 
+                        type="text" 
+                        id="importMongoUrl" 
+                        placeholder="mongodb://localhost:27017 or mongodb+srv://..."
+                        value="mongodb://localhost:27017"
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label for="importDbName">Target Database Name</label>
+                    <input 
+                        type="text" 
+                        id="importDbName" 
+                        placeholder="myRestoredDatabase"
+                    >
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-success" id="importBtn">
+                        📥 Import Database
+                    </button>
+                </div>
+
+                <div class="status" id="importStatus"></div>
+
+                <div class="import-results" id="importResults">
+                    <div class="result-card">
+                        <div class="result-header">
+                            <h3 style="margin: 0; color: #333;">Import Results</h3>
+                        </div>
+                        <div class="result-summary" id="resultSummary"></div>
+                        <table class="result-table">
+                            <thead>
+                                <tr>
+                                    <th>Collection</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Documents Imported</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>📝 How to import:</strong><br>
+                1. Upload a ZIP file containing your MongoDB backup (JSON files)<br>
+                2. Enter the MongoDB connection URL<br>
+                3. Specify the target database name (can be different from original)<br>
+                4. Click "Import Database" to restore all collections<br><br>
+                <strong>⚠️ Important:</strong> If the database already exists, collections will be created/appended. Use a new database name for a clean import.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let collectionsData = [];
+        let mongoUrl = '';
+        let dbName = '';
+        let selectedFile = null;
+
+        // Tab switching
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const backupTab = document.getElementById('backupTab');
+        const importTab = document.getElementById('importTab');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const tab = btn.dataset.tab;
+                if (tab === 'backup') {
+                    backupTab.classList.add('active');
+                    importTab.classList.remove('active');
+                } else {
+                    backupTab.classList.remove('active');
+                    importTab.classList.add('active');
+                }
+            });
+        });
+
+        // Backup functionality
+        const connectBtn = document.getElementById('connectBtn');
+        const backupBtn = document.getElementById('backupBtn');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const deselectAllBtn = document.getElementById('deselectAllBtn');
+        const masterCheckbox = document.getElementById('masterCheckbox');
+        
+        const step2 = document.getElementById('step2');
+        const connectStatus = document.getElementById('connectStatus');
+        const backupStatus = document.getElementById('backupStatus');
+        const collectionsBody = document.getElementById('collectionsBody');
+
+        function showStatus(element, message, type) {
+            element.className = `status show ${type}`;
+            element.innerHTML = message;
+        }
+
+        function hideStatus(element) {
+            element.className = 'status';
+        }
+
+        function updateStats() {
+            const selected = collectionsData.filter(c => c.selected);
+            const totalDocs = selected.reduce((sum, c) => sum + c.count, 0);
+            
+            document.getElementById('selectedCount').textContent = selected.length;
+            document.getElementById('totalCount').textContent = collectionsData.length;
+            document.getElementById('totalDocs').textContent = totalDocs.toLocaleString();
+        }
+
+        function renderCollections() {
+            collectionsBody.innerHTML = '';
+            
+            collectionsData.forEach((collection, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="checkbox-cell">
+                        <input type="checkbox" class="collection-checkbox" data-index="${index}" ${collection.selected ? 'checked' : ''}>
+                    </td>
+                    <td><strong>${collection.name}</strong></td>
+                    <td style="text-align: right;">
+                        <span class="count-badge">${collection.count.toLocaleString()}</span>
+                    </td>
+                `;
+                collectionsBody.appendChild(row);
+            });
+
+            // Add event listeners to checkboxes
+            document.querySelectorAll('.collection-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    collectionsData[index].selected = e.target.checked;
+                    updateStats();
+                    updateMasterCheckbox();
+                });
+            });
+
+            updateStats();
+            updateMasterCheckbox();
+        }
+
+        function updateMasterCheckbox() {
+            const allSelected = collectionsData.every(c => c.selected);
+            const noneSelected = collectionsData.every(c => !c.selected);
+            
+            masterCheckbox.checked = allSelected;
+            masterCheckbox.indeterminate = !allSelected && !noneSelected;
+        }
+
+        masterCheckbox.addEventListener('change', (e) => {
+            const checked = e.target.checked;
+            collectionsData.forEach(c => c.selected = checked);
+            renderCollections();
+        });
+
+        selectAllBtn.addEventListener('click', () => {
+            collectionsData.forEach(c => c.selected = true);
+            renderCollections();
+        });
+
+        deselectAllBtn.addEventListener('click', () => {
+            collectionsData.forEach(c => c.selected = false);
+            renderCollections();
+        });
+
+        connectBtn.addEventListener('click', async () => {
+            mongoUrl = document.getElementById('mongoUrl').value.trim();
+            dbName = document.getElementById('dbName').value.trim();
+
+            if (!mongoUrl || !dbName) {
+                showStatus(connectStatus, '❌ Please enter both MongoDB URL and Database Name', 'error');
+                return;
+            }
+
+            connectBtn.disabled = true;
+            step2.classList.remove('show');
+            showStatus(connectStatus, '<span class="spinner"></span>Connecting to database and loading collections...', 'loading');
+
+            try {
+                const response = await fetch('http://localhost:3000/api/get-collections', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mongoUrl, dbName })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    collectionsData = data.collections;
+                    
+                    if (collectionsData.length === 0) {
+                        showStatus(connectStatus, '⚠️ No collections found in database', 'error');
+                        return;
+                    }
+
+                    showStatus(connectStatus, 
+                        `✅ Connected successfully! Found ${data.totalCollections} collections with ${data.totalDocuments.toLocaleString()} total documents.`, 
+                        'success'
+                    );
+                    
+                    renderCollections();
+                    step2.classList.add('show');
+                    
+                } else {
+                    showStatus(connectStatus, `❌ ${data.error || 'Failed to connect'}<br>${data.details || ''}`, 'error');
+                }
+            } catch (error) {
+                showStatus(connectStatus, `❌ Connection error: ${error.message}`, 'error');
+            } finally {
+                connectBtn.disabled = false;
+            }
+        });
+
+        backupBtn.addEventListener('click', async () => {
+            const selectedCollections = collectionsData
+                .filter(c => c.selected)
+                .map(c => c.name);
+
+            if (selectedCollections.length === 0) {
+                showStatus(backupStatus, '❌ Please select at least one collection to backup', 'error');
+                return;
+            }
+
+            backupBtn.disabled = true;
+            connectBtn.disabled = true;
+            
+            const startTime = Date.now();
+            const selectedCount = selectedCollections.length;
+            const totalDocs = collectionsData
+                .filter(c => c.selected)
+                .reduce((sum, c) => sum + c.count, 0);
+
+            showStatus(backupStatus, 
+                `<span class="spinner"></span>Creating backup of ${selectedCount} collections (${totalDocs.toLocaleString()} documents)...`, 
+                'loading'
+            );
+
+            try {
+                const response = await fetch('http://localhost:3000/api/backup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        mongoUrl, 
+                        dbName, 
+                        selectedCollections 
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Backup failed');
+                }
+
+                // Download the ZIP file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${dbName}_backup_${Date.now()}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                const processingTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                showStatus(backupStatus,
+                    `✅ Backup completed successfully!<br>` +
+                    `📊 ${selectedCount} collections backed up (${totalDocs.toLocaleString()} documents)<br>` +
+                    `⏱️ Processing time: ${processingTime} seconds<br>` +
+                    `💾 Check your downloads folder for the ZIP file.`,
+                    'success'
+                );
+            } catch (error) {
+                showStatus(backupStatus, `❌ Backup failed: ${error.message}`, 'error');
+            } finally {
+                backupBtn.disabled = false;
+                connectBtn.disabled = false;
+            }
+        });
+        
+        // Import functionality
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const selectedFileDiv = document.getElementById('selectedFile');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const removeFileBtn = document.getElementById('removeFileBtn');
+        const importBtn = document.getElementById('importBtn');
+        const importStatus = document.getElementById('importStatus');
+        const importResults = document.getElementById('importResults');
+        const resultSummary = document.getElementById('resultSummary');
+        const resultTableBody = document.getElementById('resultTableBody');
+
+        // File upload click
+        fileUploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // File selection
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFileSelect(file);
+            }
+        });
+
+        // Drag and drop
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        });
+
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.classList.remove('dragover');
+        });
+
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.zip')) {
+                handleFileSelect(file);
+            } else {
+                showStatus(importStatus, '❌ Please select a valid ZIP file', 'error');
+            }
+        });
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            selectedFileDiv.classList.add('show');
+            fileUploadArea.style.display = 'none';
+            hideStatus(importStatus);
+            importResults.classList.remove('show');
+        }
+
+        removeFileBtn.addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            selectedFileDiv.classList.remove('show');
+            fileUploadArea.style.display = 'block';
+            hideStatus(importStatus);
+            importResults.classList.remove('show');
+        });
+
+        importBtn.addEventListener('click', async () => {
+            const importMongoUrl = document.getElementById('importMongoUrl').value.trim();
+            const importDbName = document.getElementById('importDbName').value.trim();
+
+            if (!selectedFile) {
+                showStatus(importStatus, '❌ Please select a ZIP file to import', 'error');
+                return;
+            }
+
+            if (!importMongoUrl || !importDbName) {
+                showStatus(importStatus, '❌ Please enter MongoDB URL and Database Name', 'error');
+                return;
+            }
+
+            importBtn.disabled = true;
+            importResults.classList.remove('show');
+
+            const startTime = Date.now();
+            showStatus(importStatus, 
+                '<span class="spinner"></span>Importing database... This may take a while for large files.', 
+                'loading'
+            );
+
+            try {
+                const formData = new FormData();
+                formData.append('zipFile', selectedFile);
+                formData.append('mongoUrl', importMongoUrl);
+                formData.append('dbName', importDbName);
+
+                const response = await fetch('http://localhost:3000/api/import', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Import failed');
+                }
+
+                const processingTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                
+                showStatus(importStatus,
+                    `✅ Import completed successfully!<br>` +
+                    `📊 ${data.successfulImports} of ${data.totalCollections} collections imported<br>` +
+                    `📝 ${data.totalDocumentsImported.toLocaleString()} total documents<br>` +
+                    `⏱️ Processing time: ${processingTime} seconds`,
+                    'success'
+                );
+
+                // Display detailed results
+                displayImportResults(data);
+
+            } catch (error) {
+                showStatus(importStatus, `❌ Import failed: ${error.message}`, 'error');
+            } finally {
+                importBtn.disabled = false;
+            }
+        });
+
+        function displayImportResults(data) {
+            resultSummary.innerHTML = `
+                <strong>Database:</strong> ${data.databaseName}<br>
+                <strong>Total Collections:</strong> ${data.totalCollections}<br>
+                <strong>Successful:</strong> ${data.successfulImports}<br>
+                <strong>Documents Imported:</strong> ${data.totalDocumentsImported.toLocaleString()}<br>
+                <strong>Processing Time:</strong> ${(data.processingTimeMs / 1000).toFixed(2)} seconds
+            `;
+
+            resultTableBody.innerHTML = '';
+            data.results.forEach(result => {
+                const row = document.createElement('tr');
+                let statusClass = 'status-success';
+                let statusText = '✅ Success';
+                
+                if (result.status === 'error') {
+                    statusClass = 'status-error';
+                    statusText = `❌ Error: ${result.error}`;
+                } else if (result.status === 'skipped') {
+                    statusClass = 'status-skipped';
+                    statusText = `⚠️ ${result.message}`;
+                }
+
+                row.innerHTML = `
+                    <td><strong>${result.collection}</strong></td>
+                    <td class="${statusClass}">${statusText}</td>
+                    <td style="text-align: right;">${result.documentsImported.toLocaleString()}</td>
+                `;
+                resultTableBody.appendChild(row);
+            });
+
+            importResults.classList.add('show');
+        }
+    </script>
+</body>
+</html>
