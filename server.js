@@ -1,11 +1,12 @@
 const express = require('express');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 const archiver = require('archiver');
 const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const AdmZip = require('adm-zip');
 const fs = require('fs');
+const { EJSON } = require('bson');
 
 const app = express();
 const PORT = 3000;
@@ -169,8 +170,8 @@ app.post('/api/backup', async (req, res) => {
           count: documents.length
         });
 
-        // Add collection data to zip
-        const jsonData = JSON.stringify(documents, null, 2);
+        // Use EJSON to serialize MongoDB types properly (ObjectId, Date, etc.)
+        const jsonData = EJSON.stringify(documents, null, 2);
         archive.append(jsonData, { name: `${collectionName}.json` });
         
       } catch (collErr) {
@@ -190,7 +191,8 @@ app.post('/api/backup', async (req, res) => {
       totalCollections: selectedCollections.length,
       totalDocuments: totalDocuments,
       collections: collectionStats,
-      processingTimeMs: Date.now() - startTime
+      processingTimeMs: Date.now() - startTime,
+      format: 'EJSON' // Indicate the format used
     };
 
     archive.append(JSON.stringify(metadata, null, 2), { name: '_backup_metadata.json' });
@@ -285,7 +287,16 @@ app.post('/api/import', upload.single('zipFile'), async (req, res) => {
       try {
         // Extract and parse JSON data
         const jsonData = entry.getData().toString('utf8');
-        const documents = JSON.parse(jsonData);
+        
+        // Try to parse as EJSON first (to restore ObjectId and other BSON types)
+        let documents;
+        try {
+          documents = EJSON.parse(jsonData);
+        } catch (ejsonError) {
+          // Fallback to regular JSON if EJSON parse fails
+          console.log(`EJSON parse failed for ${collectionName}, trying regular JSON`);
+          documents = JSON.parse(jsonData);
+        }
 
         if (!Array.isArray(documents)) {
           throw new Error('JSON file must contain an array of documents');
